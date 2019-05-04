@@ -1,0 +1,96 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Basic Inferential Data Analysis 
+### Writen by: Andrew Leonard
+### John Hopkins Data Science Specialization: Statistical Inference
+
+#### Synopsis
+We will use the Tooth Growth data set from the R datasets package to explore the question: "Do different suppliments and/or dosage affect tooth growth in guinea pigs?"
+
+The data set looks at two suppliments: orange juice and vitamin C and different dosage levels of each.
+
+Dataset variables:
+len: Tooth length
+supp: Supplement type (Vitamin C or Orange Juice)
+dose: Dose in milligrams
+
+#### Summary Analysis
+While the sampele size is low, the data appears resembles a normal distribution. With 30 samples per supp, we will use t-tests for our hypothesis testing.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+data("ToothGrowth")
+summary(ToothGrowth)
+dim(ToothGrowth)
+
+hist(ToothGrowth$len)
+
+qplot(supp, len, data = ToothGrowth, facets = ~dose)+
+    geom_boxplot(aes(fill = supp))
+```
+
+#### Analysis Part 1: Tooth Length and Supplement Type
+First, we will test if the supplement type has an impact on tooth growth.
+
+For our test h0 is: OJ = VC, h1 is: OJ != VC
+
+```{r}
+#group by suppliment
+supp <- group_by(ToothGrowth, supp)
+bysupp <- summarise(supp, mean(len), sd(len))
+names(bysupp) <- c("supp", "mean", "sd")
+
+muOJ <- bysupp$mean[1]
+muVC <- bysupp$mean[2]
+sdOJ <- bysupp$sd[1]
+sdVC <- bysupp$sd[2]
+n <- 30
+
+se <- sqrt((sdOJ^2/n) + (sdVC^2/n))
+
+tstat <- (muOJ - muVC)/se
+
+#95% confidence interval
+t <- qt(.975, 58)
+(muOJ - muVC) + c(-1,1)*t*se
+
+#pvalue
+pv <- pt(-abs(tstat), n-2)*2
+```
+Our t statistic is `r tstat`, which is lower than the 95% two tail confidence t statistic of `r t`. This indicates we should accept the null hypothesis. To confirm this is correct, we can look at our p-value. Our p-value is `r pv`, which is higher than .05 at 95% confidence, confirming we cannot reject the null hypothesis. Thus, we cannot infer that there is a statistical difference in tooth growth dependent on suppliment type at a 95% confidence interval.
+
+##### Part 2: Tooth Length and Dosage 
+For the second portion, we will look at dosage. We will compare a half dose to a double dose for this test. 
+
+For our test h0 is: halfdose = doubledose, h1 is:halfdose < doubledose
+
+```{r}
+
+#group by suppliment
+dose <- group_by(ToothGrowth, dose)
+bydose <- summarise(dose, mean(len), sd(len))
+names(bydose) <- c("supp", "mean", "sd")
+
+muhalf <- bydose$mean[1]
+mudouble <- bydose$mean[3]
+sdhalf <- bydose$sd[1]
+sddouble <- bydose$sd[3]
+n <- 20
+
+se <- sqrt((sdhalf^2/n) + (sddouble^2/n))
+
+tstat <- (muhalf - mudouble)/se
+
+#95% confidence interval
+t <- qt(.95, n-2)
+(muhalf-mudouble)+(t*se)
+
+#pvalue
+pv <- pt(-abs(tstat), n-2)
+```
+Our t statistic is `r tstat`, which is below our 95% one tail confidence t statistic of `r t`. This indicates we should reject the null hypothesis. To confirm this is correct, we can look at our p-value. Our p-value is `r pv`, which is much lower than .05 at 95% confidence, confirming we can reject the null hypothesis and infer that a double dose has a larger impact on tooth growth than a half a dose.
+
